@@ -8,8 +8,8 @@
       },
       "backendUri": "https://grapevinefunc.azurewebsites.net/GrapevineFunc",
       "requestOverrides": {
-        "backend.request.headers.GrapevineAction": "games",
-        "backend.request.querystring.GameId": "{gameId}"
+        "backend.request.headers.GrapevineAction": "game",
+        "backend.request.headers.GameId": "{gameId}"
       }
     },
     "getAllGamesProxy": {
@@ -19,7 +19,7 @@
       },
       "backendUri": "https://grapevinefunc.azurewebsites.net/GrapevineFunc",
       "requestOverrides": {
-        "backend.request.headers.GrapevineAction": "allgames"
+        "backend.request.headers.GrapevineAction": "games"
       }
     },
     "whisperProxy": {

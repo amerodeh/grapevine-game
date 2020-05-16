@@ -11,9 +11,6 @@
     <ProjectReference Include="..\Grapevine.GameRunner\Grapevine.GameRunner.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="function.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="host.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
