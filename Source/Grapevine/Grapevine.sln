@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29911.84
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Grapevine.GameRunner", "Grapevine.GameRunner\Grapevine.GameRunner.csproj", "{85CBC086-7188-407A-8C35-013C58AC4950}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Grapevine.GameRunner", "Grapevine.GameRunner\Grapevine.GameRunner.csproj", "{85CBC086-7188-407A-8C35-013C58AC4950}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrapevineFunc", "GrapevineFunc\GrapevineFunc.csproj", "{942E3295-0F31-4686-8832-28D0F0E93C23}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{85CBC086-7188-407A-8C35-013C58AC4950}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{85CBC086-7188-407A-8C35-013C58AC4950}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{85CBC086-7188-407A-8C35-013C58AC4950}.Release|Any CPU.Build.0 = Release|Any CPU
+		{942E3295-0F31-4686-8832-28D0F0E93C23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{942E3295-0F31-4686-8832-28D0F0E93C23}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{942E3295-0F31-4686-8832-28D0F0E93C23}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{942E3295-0F31-4686-8832-28D0F0E93C23}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

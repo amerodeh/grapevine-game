@@ -1,0 +1,36 @@
+﻿{
+  "$schema": "http://json.schemastore.org/proxies",
+  "proxies": {
+    "getSpecificGameProxy": {
+      "matchCondition": {
+        "methods": [ "GET" ],
+        "route": "/game/{gameId}"
+      },
+      "backendUri": "https://grapevinefunc.azurewebsites.net/GrapevineFunc",
+      "requestOverrides": {
+        "backend.request.headers.GrapevineAction": "games",
+        "backend.request.querystring.GameId": "{gameId}"
+      }
+    },
+    "getAllGamesProxy": {
+      "matchCondition": {
+        "methods": [ "GET" ],
+        "route": "/games"
+      },
+      "backendUri": "https://grapevinefunc.azurewebsites.net/GrapevineFunc",
+      "requestOverrides": {
+        "backend.request.headers.GrapevineAction": "allgames"
+      }
+    },
+    "whisperProxy": {
+      "matchCondition": {
+        "methods": [ "POST" ],
+        "route": "/whisper"
+      },
+      "backendUri": "https://grapevinefunc.azurewebsites.net/GrapevineFunc",
+      "requestOverrides": {
+        "backend.request.headers.GrapevineAction": "whisper"
+      }
+    }
+  }
+}
