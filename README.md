@@ -13,7 +13,7 @@ https://amergrapevine2020.blob.core.windows.net/grapevine-games-received-message
 
 Example:
 
-https://amergrapevine2020.blob.core.windows.net/grapevine-games-received-messages/1234567890
+https://amergrapevine2020.blob.core.windows.net/grapevine-games-received-messages/1234567890.txt
 
 
 # Grapevine Coding Challenge
