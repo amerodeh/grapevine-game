@@ -1,3 +1,21 @@
+Endpoint url: 
+
+https://grapevinefunc.azurewebsites.net/
+
+Example:
+
+https://grapevinefunc.azurewebsites.net/whisper
+
+
+Received messages are logged and can be easily accessed via
+
+https://amergrapevine2020.blob.core.windows.net/grapevine-games-received-messages/{gameId}
+
+Example:
+
+https://amergrapevine2020.blob.core.windows.net/grapevine-games-received-messages/1234567890.txt
+
+
 # Grapevine Coding Challenge
 
 ## Intro
