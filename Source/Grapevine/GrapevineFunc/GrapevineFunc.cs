@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Grapevine.GameRunner.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +23,7 @@ namespace GrapevineFunc
         ILogger logger)
         {
             _logger = logger;
+            BlobUtilities.Logger = logger;
             var headerValue = req.Headers["GrapevineAction"];
             _logger.LogDebug($"Parsed header '{headerValue}'");
 
@@ -57,7 +59,7 @@ namespace GrapevineFunc
                 BlobUtilities.WriteGameStartTime(whisper.GameId);
                 BlobUtilities.WriteStartMessage(whisper.GameId, whisper.Message);
                 InterpretWhisper(whisper);
-                UpdateNextRecipientId(whisper);
+                UpdateWhisperIds(whisper);
                 await SendWhisperToUrl(GetNextRecipientUrl(whisper), whisper);
             }
             else if (whisper.SentFromId == whisper.WhisperRecipients.Last().Id) // received from last player, game over, write results
@@ -74,7 +76,7 @@ namespace GrapevineFunc
             {
                 _logger.LogDebug($"{whisper.GameId} sent from normal player");
                 InterpretWhisper(whisper);
-                UpdateNextRecipientId(whisper);
+                UpdateWhisperIds(whisper);
                 await SendWhisperToUrl(GetNextRecipientUrl(whisper), whisper);
             }
 
@@ -87,21 +89,6 @@ namespace GrapevineFunc
             var wordToReplace = SelectWord(whisper.Message);
             var replacementWord = GetRhymingWord(wordToReplace).Result;
             whisper.Message = ReplaceWord(whisper.Message, wordToReplace, replacementWord);
-        }
-
-        private static string ReplaceWord(string message, string wordToReplace, string replacementWord)
-        {
-            int indexToReplace;
-            if (new Random().Next() % 2 == 0)
-            {
-                indexToReplace = message.IndexOf(wordToReplace, StringComparison.InvariantCultureIgnoreCase);
-            }
-            else
-            {
-                indexToReplace = message.LastIndexOf(wordToReplace, StringComparison.InvariantCultureIgnoreCase);
-            }
-
-            return message.Remove(indexToReplace, wordToReplace.Length).Insert(indexToReplace, replacementWord);
         }
 
         private static async Task SendWhisperToUrl(string url, MessageRequest whisper)
@@ -120,7 +107,7 @@ namespace GrapevineFunc
                 wordsWithoutPunctuation = wordsWithoutConjunctions;
             }
 
-            return wordsWithoutPunctuation.ElementAt(new Random().Next(wordsWithoutConjunctions.Length));
+            return wordsWithoutPunctuation.ElementAt(new Random().Next(wordsWithoutPunctuation.Length));
         }
 
         private static async Task<string> GetRhymingWord(string word)
@@ -134,10 +121,44 @@ namespace GrapevineFunc
             }
             catch
             {
-                _logger.LogInformation(
+                _logger.LogCritical(
                     $"Datamuse can't find a word that rhymes with {word}. Using original word to keep the game going!");
                 return word;
             }
+        }
+
+        private static string ReplaceWord(string message, string wordToReplace, string replacementWord)
+        {
+            int indexToReplace;
+            if (new Random().Next() % 2 == 0)
+            {
+                indexToReplace = message.IndexOf(wordToReplace, StringComparison.InvariantCultureIgnoreCase);
+            }
+            else
+            {
+                indexToReplace = message.LastIndexOf(wordToReplace, StringComparison.InvariantCultureIgnoreCase);
+            }
+
+            return message.Remove(indexToReplace, wordToReplace.Length).Insert(indexToReplace, replacementWord);
+        }
+
+        private static string GetNextRecipientUrl(MessageRequest whisper)
+        {
+            var nextRecipientId = whisper.NextWhisperRecipientId;
+            return whisper.WhisperRecipients.Single(r => r.Id == nextRecipientId).Url;
+        }
+
+        private static void UpdateWhisperIds(in MessageRequest whisper)
+        {
+            whisper.SentFromId++;
+            var currentNextRecipientId = whisper.NextWhisperRecipientId;
+            var newNextRecipientId = 0; // assume we're last, so sending to first player
+            if (currentNextRecipientId != whisper.WhisperRecipients.Count - 1) // we're not last, just increment
+            {
+                newNextRecipientId = currentNextRecipientId + 1;
+            }
+
+            whisper.NextWhisperRecipientId = newNextRecipientId;
         }
 
         private static async Task<IActionResult> GetGame(StringValues gameId)
@@ -154,38 +175,20 @@ namespace GrapevineFunc
 
         private static async Task<IActionResult> GetAllGames()
         {
-            var result = new JsonTextWriter(new StringWriter());
+            var stringBuilder = new StringBuilder();
+            var result = new JsonTextWriter(new StringWriter(stringBuilder));
 
             await result.WriteStartObjectAsync();
             await result.WritePropertyNameAsync("games");
             await result.WriteStartArrayAsync();
             foreach (var game in BlobUtilities.ReadAllBlobsInContainer(await BlobUtilities.GameBlobContainer))
             {
-                await result.WriteValueAsync(game);
+                await result.WriteRawValueAsync(await game);
             }
             await result.WriteEndArrayAsync();
             await result.WriteEndObjectAsync();
 
-            return new OkObjectResult(result.ToString());
-        }
-
-        private static string GetNextRecipientUrl(MessageRequest whisper)
-        {
-            var nextRecipientId = whisper.NextWhisperRecipientId;
-            return whisper.WhisperRecipients.Single(r => r.Id == nextRecipientId).Url;
-        }
-
-        private static void UpdateNextRecipientId(in MessageRequest whisper)
-        {
-            var currentNextRecipientId = whisper.NextWhisperRecipientId;
-            var newNextRecipientId = 0;
-            if (whisper.WhisperRecipients.Count != currentNextRecipientId - 1)
-            {
-                newNextRecipientId = currentNextRecipientId + 1;
-
-            }
-
-            whisper.NextWhisperRecipientId = newNextRecipientId;
+            return new OkObjectResult(stringBuilder.ToString());
         }
 
         private static void LogWhisper(MessageRequest whisper)

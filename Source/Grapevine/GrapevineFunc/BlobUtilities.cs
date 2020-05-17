@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Grapevine.GameRunner.Models;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -12,6 +13,8 @@ namespace GrapevineFunc
 {
     public static class BlobUtilities
     {
+        public static ILogger Logger { private get; set; }
+
         public static Task<CloudBlobContainer> GameBlobContainer => GetBlobContainer("grapevine-games");
 
         public static Task<CloudBlobContainer> GameStartTimesBlobContainer => GetBlobContainer("grapevine-games-start-times");
@@ -50,26 +53,49 @@ namespace GrapevineFunc
 
         public static async void WriteText(CloudBlobContainer container, string blobName, string text)
         {
-            await container.GetBlockBlobReference(blobName).UploadTextAsync(text);
+            try
+            {
+                await container.GetBlockBlobReference($"{blobName}").UploadTextAsync(text);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e, $"Failed to write text to blob '{blobName}' in container '{container.Name}'");
+            }
         }
 
         public static async Task<string> ReadText(CloudBlobContainer container, string blobName)
         {
-            return !container.GetBlockBlobReference(blobName).Exists()
-                ? string.Empty
-                : await container.GetBlockBlobReference(blobName).DownloadTextAsync();
+            try
+            {
+                return !container.GetBlockBlobReference(blobName).Exists()
+                    ? string.Empty
+                    : await container.GetBlockBlobReference(blobName).DownloadTextAsync();
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e, $"Failed to read text from blob '{blobName}' in container '{container.Name}'");
+                return string.Empty;
+            }
         }
 
         public static List<Task<string>> ReadAllBlobsInContainer(CloudBlobContainer container)
         {
-            return container.ListBlobs().Select(async item => await ((CloudBlockBlob)item).DownloadTextAsync()).ToList();
+            try
+            {
+                return container.ListBlobs().Select(async item => await ((CloudBlockBlob)item).DownloadTextAsync()).ToList();
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e, $"Failed to read all blobs from container '{container.Name}'");
+                return new List<Task<string>>();
+            }
         }
 
         public static async void WriteMessage(MessageRequest whisper)
         {
-            // Saves a message
-            // Theoretically we can be specified multiple times in the recipients list
-            // in a single game hence the logic to append new messages
+            // Saves a message for easy access properties
+            // Theoretically we can be listed multiple times in the recipients list in a single
+            //  game hence the logic to append new messages since they're tied to the same game
             var blobText = await ReadText(await ReceivedMessagesBlobContainer, $"{whisper.GameId}");
             blobText += whisper.Message + Environment.NewLine;
             WriteText(await ReceivedMessagesBlobContainer, $"{whisper.GameId}", blobText);

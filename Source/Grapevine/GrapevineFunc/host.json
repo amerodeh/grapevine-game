@@ -5,10 +5,12 @@
     }
   },
   "logging": {
-    "applicationInsights": {
-      "samplingSettings": {
-        "isEnabled": false
-      }
+    "fileLoggingMode": "always",
+    "logLevel": {
+      "default": "Information",
+      "Host.Results": "Error",
+      "Function": "Trace",
+      "Host.Aggregator": "Trace"
     }
   },
   "version": "2.0"
