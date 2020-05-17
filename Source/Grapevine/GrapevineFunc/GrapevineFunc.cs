@@ -105,7 +105,10 @@ namespace GrapevineFunc
         {
             var punctuation = sentence.Where(char.IsPunctuation).Distinct().ToArray();
             var wordsWithoutPunctuation = sentence.Split().Select(x => x.Trim(punctuation)).ToArray();
-            var wordsWithoutConjunctions = wordsWithoutPunctuation.Where(word => _conjuctions.Split(',').Contains(word)).ToArray();
+            var wordsWithoutConjunctions = wordsWithoutPunctuation
+                .Where(word => !_conjuctions.Split(',').Contains(word)) // get rid of conjuctions
+                .Where(word => word.All(c => !char.IsDigit(c))).ToArray(); // get rid of strings with digits
+
             if (wordsWithoutConjunctions.Any())
             {
                 wordsWithoutPunctuation = wordsWithoutConjunctions;
