@@ -75,9 +75,9 @@ namespace GrapevineFunc
             // Saves a message for easy access
             // Theoretically we can be listed multiple times in the recipients list in a single
             // game hence the logic to append new messages since they're tied to the same game
-            var blobText = await ReadText(await ReceivedMessagesBlobContainer, $"{whisper.GameId}");
+            var blobText = await ReadText(await ReceivedMessagesBlobContainer, $"{whisper.GameId}.txt");
             blobText += whisper.Message + Environment.NewLine;
-            WriteText(await ReceivedMessagesBlobContainer, $"{whisper.GameId}", blobText);
+            WriteText(await ReceivedMessagesBlobContainer, $"{whisper.GameId}.txt", blobText);
         }
 
         public static async void WriteText(CloudBlobContainer container, string blobName, string text)
