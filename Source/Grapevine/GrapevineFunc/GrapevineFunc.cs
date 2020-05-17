@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
+using static GrapevineFunc.BlobUtilities;
 
 namespace GrapevineFunc
 {
@@ -23,7 +24,9 @@ namespace GrapevineFunc
         ILogger logger)
         {
             _logger = logger;
-            BlobUtilities.Logger = logger;
+            _random = new Random();
+            Logger = logger;
+
             var headerValue = req.Headers["GrapevineAction"];
             _logger.LogDebug($"Parsed header '{headerValue}'");
 
@@ -32,49 +35,49 @@ namespace GrapevineFunc
                 case "whisper":
                     var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
                     logger.LogDebug($"Received whisper: '{requestBody}'");
-                    var data = JsonConvert.DeserializeObject<MessageRequest>(requestBody);
-                    return await HandleWhisper(data);
+
+                    return await HandleWhisper(JsonConvert.DeserializeObject<MessageRequest>(requestBody));
+
                 case "games":
                     logger.LogDebug("All games requested.");
                     return await GetAllGames();
+
                 case "game":
                     var gameId = req.Headers["GameId"];
                     logger.LogDebug($"Requested game '{gameId}'");
                     return await GetGame(gameId);
+
                 default:
-                    logger.LogDebug($"Bad request: {await new StreamReader(req.Body).ReadToEndAsync()}");
                     return new BadRequestResult();
             }
         }
 
         private static async Task<IActionResult> HandleWhisper(MessageRequest whisper)
         {
-            _logger.LogDebug($"Handling whisper '{JsonConvert.SerializeObject(whisper)}'");
-
-            LogWhisper(whisper);
+            LogWhisper(whisper); // log every message as per spec
 
             if (whisper.SentFromId == -1) // sent from game initiator
             {
-                _logger.LogDebug("sent from game init");
-                BlobUtilities.WriteGameStartTime(whisper.GameId);
-                BlobUtilities.WriteStartMessage(whisper.GameId, whisper.Message);
+                _logger.LogDebug($"Game '{whisper.GameId}' sent from game initiator");
+                WriteGameStartTime(whisper.GameId);
+                WriteStartMessage(whisper.GameId, whisper.Message);
                 InterpretWhisper(whisper);
                 UpdateWhisperIds(whisper);
                 await SendWhisperToUrl(GetNextRecipientUrl(whisper), whisper);
             }
-            else if (whisper.SentFromId == whisper.WhisperRecipients.Last().Id) // received from last player, game over, write results
+            else if (whisper.SentFromId == whisper.WhisperRecipients.Count - 1) // received from last player, game over, write results
             {
-                _logger.LogDebug($"{whisper.GameId} sent from last player");
-                BlobUtilities.WriteGame(
+                _logger.LogDebug($"Game '{whisper.GameId}' sent from last player");
+                WriteGame(
                     whisper.GameId,
-                    await BlobUtilities.GetGameStartTime(whisper.GameId),
+                    await GetGameStartTime(whisper.GameId),
                     GetCurrentTime,
-                    await BlobUtilities.GetStartMessage(whisper.GameId),
+                    await GetStartMessage(whisper.GameId),
                     whisper.Message);
             }
             else
             {
-                _logger.LogDebug($"{whisper.GameId} sent from normal player");
+                _logger.LogDebug($"Game '{whisper.GameId}' sent from normal player");
                 InterpretWhisper(whisper);
                 UpdateWhisperIds(whisper);
                 await SendWhisperToUrl(GetNextRecipientUrl(whisper), whisper);
@@ -94,7 +97,8 @@ namespace GrapevineFunc
         private static async Task SendWhisperToUrl(string url, MessageRequest whisper)
         {
             using var httpClient = new HttpClient();
-            await httpClient.PostAsJsonAsync(url, whisper);
+            httpClient.PostAsJsonAsync(url, whisper);
+            await Task.Delay(2000); // due to fire and forget
         }
 
         private static string SelectWord(string sentence)
@@ -107,7 +111,7 @@ namespace GrapevineFunc
                 wordsWithoutPunctuation = wordsWithoutConjunctions;
             }
 
-            return wordsWithoutPunctuation.ElementAt(new Random().Next(wordsWithoutPunctuation.Length));
+            return wordsWithoutPunctuation.ElementAt(_random.Next(wordsWithoutPunctuation.Length));
         }
 
         private static async Task<string> GetRhymingWord(string word)
@@ -121,8 +125,7 @@ namespace GrapevineFunc
             }
             catch
             {
-                _logger.LogCritical(
-                    $"Datamuse can't find a word that rhymes with {word}. Using original word to keep the game going!");
+                _logger.LogCritical($"Datamuse can't find a word rhyming with {word}. Using original word to keep the game going!");
                 return word;
             }
         }
@@ -130,7 +133,7 @@ namespace GrapevineFunc
         private static string ReplaceWord(string message, string wordToReplace, string replacementWord)
         {
             int indexToReplace;
-            if (new Random().Next() % 2 == 0)
+            if (_random.Next() % 2 == 0)
             {
                 indexToReplace = message.IndexOf(wordToReplace, StringComparison.InvariantCultureIgnoreCase);
             }
@@ -163,7 +166,7 @@ namespace GrapevineFunc
 
         private static async Task<IActionResult> GetGame(StringValues gameId)
         {
-            var game = await BlobUtilities.ReadText(await BlobUtilities.GameBlobContainer, $"{gameId}");
+            var game = await ReadText(await GameBlobContainer, $"{gameId}");
 
             if (string.IsNullOrEmpty(game))
             {
@@ -181,7 +184,7 @@ namespace GrapevineFunc
             await result.WriteStartObjectAsync();
             await result.WritePropertyNameAsync("games");
             await result.WriteStartArrayAsync();
-            foreach (var game in BlobUtilities.ReadAllBlobsInContainer(await BlobUtilities.GameBlobContainer))
+            foreach (var game in ReadAllBlobsInContainer(await GameBlobContainer))
             {
                 await result.WriteRawValueAsync(await game);
             }
@@ -194,7 +197,7 @@ namespace GrapevineFunc
         private static void LogWhisper(MessageRequest whisper)
         {
             _logger.LogInformation($"{whisper.GameId}:{whisper.Message}");
-            BlobUtilities.WriteMessage(whisper);
+            WriteMessage(whisper);
         }
 
         private static string GetCurrentTime => DateTime.UtcNow.ToString("o");
@@ -209,5 +212,7 @@ namespace GrapevineFunc
             "Whereas,Whomever,When,While,Yet";
 
         private static ILogger _logger;
+
+        private static Random _random;
     }
 }
